@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes, viewport-fit=cover">
+    <title>商品成本管家 V2600401-01</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background: #f1f5f9; margin: 0; padding: 0; min-height: 100vh; }
+        .app-container { max-width: 800px; margin: 0 auto; padding: 12px; }
+        .top-bar { position: sticky; top: 0; background: #f1f5f9; z-index: 99; padding: 8px 0; backdrop-filter: blur(4px); }
+        .search-section { background: white; border-radius: 32px; padding: 8px 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 16px; display: flex; gap: 8px; align-items: center; }
+        .search-section i { color: #6c86a3; }
+        .search-section input { flex: 1; border: none; outline: none; font-size: 1rem; background: transparent; padding: 8px 0; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-bottom: 12px; }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-menu { display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; min-width: 160px; }
+        .dropdown-menu button { display: block; width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 0.85rem; }
+        .dropdown-menu button:hover { background: #f1f5f9; }
+        .dropdown:hover .dropdown-menu { display: block; }
+        .card { background: white; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #ffffff; border-bottom: 1px solid #e9ecef; font-weight: 600; font-size: 1rem; cursor: pointer; }
+        .card-header i.fa-chevron-down { transition: transform 0.2s; }
+        .card-header.collapsed i.fa-chevron-down { transform: rotate(-90deg); }
+        .card-body { padding: 12px; }
+        .card-body.collapsed { display: none; }
+        .product-name-block { border: 1px solid #eef2f6; border-radius: 16px; margin-bottom: 12px; overflow: hidden; }
+        .product-name-header { background: #f8fafc; padding: 10px 14px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #e9ecef; }
+        .product-name-header i.fa-chevron-right { transition: transform 0.2s; margin-right: 8px; }
+        .product-name-header.collapsed i.fa-chevron-right { transform: rotate(0deg); }
+        .product-name-header:not(.collapsed) i.fa-chevron-right { transform: rotate(90deg); }
+        .product-content { padding: 8px; background: white; }
+        .product-content.collapsed { display: none; }
+        .sku-item, .pkg-item { background: #ffffff; border: 1px solid #eef2f6; border-radius: 16px; margin-bottom: 10px; padding: 10px; }
+        .item-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
+        .item-checkbox { order: 0; flex-shrink: 0; margin: 0; width: 20px; height: 20px; cursor: pointer; }
+        .item-img { order: 1; flex-shrink: 0; width: 44px; height: 44px; object-fit: cover; border-radius: 12px; background: #f1f3f5; border: 1px solid #e2e8f0; cursor: pointer; }
+        .item-info { order: 2; flex: 2 1 120px; min-width: 100px; }
+        .item-cost { order: 3; flex-shrink: 0; font-weight: 700; color: #1e293b; white-space: nowrap; }
+        .item-actions { order: 4; flex-shrink: 0; display: flex; gap: 8px; align-items: center; }
+        .btn-icon { background: transparent; border: none; padding: 5px 8px; border-radius: 30px; cursor: pointer; font-size: 0.7rem; color: #4b5563; transition: background 0.2s; }
+        .btn-icon:hover { background: #e9ecef; }
+        .btn-primary-solid { background: #2c7da0; color: white; border: none; padding: 8px 16px; border-radius: 40px; font-weight: 500; cursor: pointer; }
+        .btn-outline { background: white; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 30px; cursor: pointer; }
+        .cost-detail { background: #f8fafc; padding: 8px 12px; border-radius: 14px; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.8rem; }
+        .remarks-list { background: #fff9e8; border-radius: 12px; padding: 8px 12px; margin-top: 8px; font-size: 0.75rem; }
+        .badge { background: #e9ecef; padding: 2px 10px; border-radius: 30px; font-size: 0.7rem; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; width: 94%; max-width: 700px; max-height: 85vh; overflow-y: auto; border-radius: 28px; padding: 20px; box-shadow: 0 20px 30px rgba(0,0,0,0.2); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { font-weight: 500; font-size: 0.85rem; display: block; margin-bottom: 6px; }
+        input, textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #cfdee9; border-radius: 20px; font-size: 0.9rem; background: white; }
+        .image-preview { margin-top: 8px; display: flex; align-items: center; gap: 12px; }
+        .image-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 12px; border: 1px solid #ddd; }
+        .combo-tree-group { margin-bottom: 16px; border: 1px solid #eef2f6; border-radius: 20px; overflow: hidden; }
+        .combo-group-header { background: #f1f5f9; padding: 10px 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .combo-group-header i { transition: transform 0.2s; }
+        .combo-group-header.collapsed i { transform: rotate(-90deg); }
+        .combo-group-content { padding: 8px; background: white; }
+        .combo-group-content.collapsed { display: none; }
+        .combo-product-item { margin-left: 16px; margin-bottom: 12px; border-left: 2px solid #e2e8f0; padding-left: 12px; }
+        .combo-product-header { background: #fefce8; padding: 6px 12px; border-radius: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .combo-product-header i { transition: transform 0.2s; font-size: 12px; }
+        .combo-product-header.collapsed i { transform: rotate(-90deg); }
+        .combo-sku-list { padding-left: 16px; }
+        .combo-sku-list.collapsed { display: none; }
+        .combo-sku-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid #f0f0f0; overflow-x: auto; }
+        .combo-sku-row input[type="checkbox"] { flex-shrink: 0; margin: 0; width: 20px; height: 20px; }
+        .combo-sku-row img { flex-shrink: 0; width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+        .combo-sku-info { flex: 2; min-width: 100px; font-size: 0.85rem; }
+        .combo-sku-cost { font-size: 0.75rem; color: #2c7da0; }
+        .combo-sku-row input.pkg-sku-qty { flex-shrink: 0; width: 70px; }
+        .package-total-preview { background: #f8fafc; padding: 8px 12px; border-radius: 20px; margin-top: 12px; text-align: right; font-weight: bold; }
+        .batch-bar { background: #eef2ff; padding: 8px 12px; border-radius: 40px; margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; z-index: 1100; }
+        .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; }
+        .action-menu { position: absolute; background: white; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 200; min-width: 100px; }
+        .action-menu button { display: block; width: 100%; text-align: left; padding: 8px 12px; background: none; border: none; cursor: pointer; font-size: 0.8rem; }
+        .action-menu button:hover { background: #f1f5f9; }
+        /* 利润计算器专用样式 */
+        .profit-summary { background: #f0f9ff; border-radius: 20px; padding: 12px 16px; margin-top: 16px; border-left: 4px solid #2c7da0; }
+        .profit-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
+        .profit-row.total { font-weight: 700; font-size: 1.1rem; border-top: 1px dashed #cbd5e1; padding-top: 8px; margin-top: 6px; }
+        .profit-value { font-weight: 700; color: #1e293b; }
+        .profit-value.positive { color: #10b981; }
+        .profit-value.negative { color: #ef4444; }
+        .readonly-bg { background-color: #f1f5f9; color: #1e293b; font-weight: 500; }
+        /* 一行四个字段的布局 - 手机端不换行 */
+        .profit-input-row {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .profit-field {
+            flex: 1;
+            min-width: 70px;
+        }
+        .profit-field label {
+            font-size: 0.7rem;
+            display: block;
+            margin-bottom: 2px;
+            color: #4b5563;
+        }
+        .profit-field input {
+            width: 100%;
+            padding: 6px 8px;
+            font-size: 0.85rem;
+            border-radius: 16px;
+        }
+        /* 产品树样式 */
+        .profit-tree-container {
+            max-height: 280px;
+            overflow-y: auto;
+            border: 1px solid #eef2f6;
+            border-radius: 20px;
+            background: white;
+            margin-bottom: 16px;
+        }
+        .profit-tree-group {
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eef2f6;
+        }
+        .profit-tree-group-header {
+            background: #f8fafc;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 12px;
+            margin: 4px;
+        }
+        .profit-tree-group-header i {
+            transition: transform 0.2s;
+            width: 16px;
+        }
+        .profit-tree-group-header.collapsed i {
+            transform: rotate(-90deg);
+        }
+        .profit-tree-group-content {
+            padding-left: 20px;
+            margin-bottom: 8px;
+        }
+        .profit-tree-group-content.collapsed {
+            display: none;
+        }
+        .profit-tree-product {
+            margin: 6px 0;
+        }
+        .profit-tree-product-header {
+            background: #fefce8;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+        }
+        .profit-tree-product-header i {
+            transition: transform 0.2s;
+            font-size: 12px;
+        }
+        .profit-tree-product-header.collapsed i {
+            transform: rotate(-90deg);
+        }
+        .profit-tree-items {
+            padding-left: 20px;
+            margin-bottom: 8px;
+        }
+        .profit-tree-items.collapsed {
+            display: none;
+        }
+        .profit-item-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 8px;
+            border-radius: 16px;
+            margin: 4px 0;
+            background: white;
+            border: 1px solid #f0f0f0;
+        }
+        .profit-item-row:hover {
+            background: #f8fafc;
+        }
+        .profit-item-checkbox {
+            flex-shrink: 0;
+            margin: 0;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .profit-item-info {
+            flex: 1;
+            font-size: 0.85rem;
+        }
+        .profit-item-cost {
+            font-weight: 600;
+            color: #2c7da0;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        .selected-items-area {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 10px;
+            margin: 12px 0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .selected-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.8rem;
+        }
+        .selected-item button {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+        .clear-all-btn {
+            background: #fee2e2;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            color: #b91c1c;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="top-bar">
+        <div class="search-section"><i class="fas fa-search"></i><input type="text" id="globalSearchInput" placeholder="搜索商品名称、SKU、备注..." autocomplete="off"><button id="clearSearchBtn" class="btn-icon" style="display:none;"><i class="fas fa-times-circle"></i></button></div>
+        <div class="toolbar">
+            <button class="btn-outline" id="addProductBtn"><i class="fas fa-cube"></i> 新增单品</button>
+            <button class="btn-outline" id="addPackageBtn"><i class="fas fa-gift"></i> 新增套餐</button>
+            <button class="btn-outline" id="profitCalculatorBtn"><i class="fas fa-chart-line"></i> 利润计算器</button>
+            <div class="dropdown"><button class="btn-outline"><i class="fas fa-cog"></i> 设置</button>
+                <div class="dropdown-menu">
+                    <button id="batchModeBtn"><i class="fas fa-check-double"></i> 批量操作</button>
+                    <button id="recycleBinBtn"><i class="fas fa-trash-alt"></i> 回收站</button>
+                    <button id="exportAllBtn"><i class="fas fa-file-excel"></i> 导出(标准版)</button>
+                    <button id="exportTable2Btn"><i class="fas fa-table"></i> 导出表格2格式(单品+套餐)</button>
+                    <button id="importBtn"><i class="fas fa-upload"></i> 导入</button>
+                    <button id="clearAllBtn" style="color:#d9534f;"><i class="fas fa-database"></i> 清空所有</button>
+                </div>
+            </div>
+            <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
+        </div>
+    </div>
+    <div id="batchActionBar" class="batch-bar" style="display:none;"><span><i class="fas fa-check-square"></i> 批量模式</span><button class="btn-outline" id="selectAllBtn">全选</button><button class="btn-outline" id="deselectAllBtn">取消全选</button><button class="btn-outline" id="batchCategoryBtn"><i class="fas fa-tags"></i> 设置分类</button><button class="btn-outline" id="batchDeleteBtn" style="color:#d9534f;"><i class="fas fa-trash-alt"></i> 删除(移入回收站)</button><button class="btn-outline" id="exitBatchModeBtn">退出批量</button><span id="selectedCount">已选0项</span></div>
+    <div id="groupsContainer"></div>
+    <button class="btn-primary-solid" id="addGroupBtn" style="width:100%; padding:12px; margin-bottom:20px;"><i class="fas fa-folder-plus"></i> 新建商品类目</button>
+    <div style="text-align: center; font-size: 12px; color: #6c86a3; padding: 20px 0 10px; border-top: 1px solid #e2e8f0; margin-top: 20px;">©️2026 | 作者:kevinludashi 版权所有 盗版必究 | 版本:V260401-01</div>
+</div>
+
+<!-- 单品模态框 -->
+<div id="skuModal" class="modal"><div class="modal-content"><div class="flex-between"><h3 id="skuModalTitle">单品SKU</h3><span class="close-modal" id="closeSkuModalBtn">&times;</span></div><form id="skuForm"><input type="hidden" id="skuId"><div class="form-group"><label>所属分类</label><div style="display: flex; gap: 8px;"><select id="skuGroupSelect" required style="flex:2;"></select><button type="button" class="btn-outline" id="newSkuGroupBtn">新建</button></div></div><div class="form-group"><label>商品名称 *</label><div style="display: flex; gap: 8px;"><input type="text" id="productName" placeholder="如：笔记本" required style="flex:2;"><select id="productNameSelect" style="flex:1.5;"><option value="">-- 选择已有商品 --</option></select></div></div><div class="form-group"><label>SKU/规格 *</label><input id="skuCode" placeholder="如：15寸银色" required></div><div class="form-group"><label>图片URL</label><input id="skuImage" placeholder="https://..."></div><div class="image-preview" id="skuImagePreview" style="display: none;"><img id="previewSkuImg"><span>预览</span></div><div class="form-group"><label>裸成本</label><input id="skuBare" type="number" step="0.01" value="0"></div><div class="form-group"><label>运费</label><input id="skuFreight" type="number" step="0.01" value="0"></div><div class="form-group"><label>其他费用</label><input id="skuOther" type="number" step="0.01" value="0"></div><div class="form-group"><label>总成本 (自动)</label><input id="skuTotal" readonly style="background:#e9ecef;"></div><div class="form-group"><label>多个备注</label><div id="skuRemarksContainer"></div><button type="button" class="btn-outline" id="addSkuRemarkBtn"><i class="fas fa-plus"></i> 添加备注</button></div><div class="footer-buttons"><button type="button" class="btn-outline" id="cancelSkuModal">取消</button><button type="submit" class="btn-primary-solid">保存SKU</button></div></form></div></div>
+
+<!-- 套餐模态框 -->
+<div id="packageModal" class="modal"><div class="modal-content"><div class="flex-between"><h3 id="packageModalTitle">套餐</h3><span class="close-modal" id="closePackageModalBtn">&times;</span></div><form id="packageForm"><input type="hidden" id="pkgId"><div class="form-group"><label>所属分类</label><div style="display: flex; gap: 8px;"><select id="pkgGroupSelect" required style="flex:2;"></select><button type="button" class="btn-outline" id="newPkgGroupBtn">新建</button></div></div><div class="form-group"><label>所属商品 *</label><select id="pkgProductSelect" required><option value="">-- 请先选择分类 --</option></select></div><div class="form-group"><label>套餐名称 *</label><input id="pkgName" required></div><div class="form-group"><label>套餐图片URL</label><input id="pkgImage" placeholder="https://..."></div><div class="image-preview" id="packageImagePreview" style="display: none;"><img id="previewPkgImg"><span>预览</span></div><div class="form-group"><label>组合单品 (三级分类展开选择)</label><div id="pkgItemsContainer" class="combo-selector" style="max-height:450px; overflow-y:auto;"></div></div><div id="pkgTotalPreview" class="package-total-preview">套餐总价: ¥0.00</div><div class="form-group"><label>多个备注</label><div id="pkgRemarksContainer"></div><button type="button" class="btn-outline" id="addPkgRemarkBtn"><i class="fas fa-plus"></i> 添加备注</button></div><div class="footer-buttons"><button type="button" class="btn-outline" id="cancelPackageModal">取消</button><button type="submit" class="btn-primary-solid">保存套餐</button></div></form></div></div>
+
+<!-- 利润计算器模态框（多选版） -->
+<div id="profitModal" class="modal"><div class="modal-content"><div class="flex-between"><h3><i class="fas fa-chart-line"></i> 利润计算器（多选）</h3><span class="close-modal" id="closeProfitModalBtn">&times;</span></div>
+    <div class="form-group"><label>选择产品 (按分类/商品树形展开，可多选)</label></div>
+    <div id="profitProductTree" class="profit-tree-container"></div>
+    <div class="flex-between" style="margin-bottom: 8px;">
+        <span><strong>已选商品</strong> (<span id="selectedCountProfit">0</span>)</span>
+        <button type="button" class="clear-all-btn" id="clearAllProfitBtn"><i class="fas fa-trash-alt"></i> 一键清除</button>
+    </div>
+    <div id="profitSelectedList" class="selected-items-area"></div>
+    <!-- 一行展示总成本、运费、打包费、其他费用，手机端不换行 -->
+    <div class="profit-input-row">
+        <div class="profit-field"><label>产品总成本</label><input type="text" id="productBaseCost" readonly class="readonly-bg" placeholder="请选择产品"></div>
+        <div class="profit-field"><label>运费(¥)</label><input type="number" id="profitShipping" step="0.01" value="2.5"></div>
+        <div class="profit-field"><label>打包费(¥)</label><input type="number" id="profitPacking" step="0.01" value="0.4"></div>
+        <div class="profit-field"><label>其他费用(¥)</label><input type="number" id="profitOtherFee" step="0.01" value="0"></div>
+    </div>
+    <div class="form-group"><label>售价 (¥)</label><input type="number" id="profitSellingPrice" step="0.01" value="0" placeholder="输入售价自动计算利润"></div>
+    <div class="profit-summary" id="profitSummary">
+        <div class="profit-row"><span>总成本 (产品+运费+打包+其他):</span><span class="profit-value" id="displayTotalCost">¥0.00</span></div>
+        <div class="profit-row"><span>预估利润:</span><span class="profit-value" id="displayProfit">¥0.00</span></div>
+        <div class="profit-row"><span>利润率:</span><span class="profit-value" id="displayMargin">0.00%</span></div>
+    </div>
+    <div class="footer-buttons"><button type="button" class="btn-outline" id="cancelProfitModal">关闭</button></div>
+</div></div>
+
+<div id="batchCategoryModal" class="modal"><div class="modal-content"><div class="flex-between"><h3>批量设置分类</h3><span class="close-modal" id="closeBatchModal">&times;</span></div><div class="form-group"><label>选择目标分类</label><select id="batchCategorySelect"></select></div><div class="footer-buttons"><button type="button" class="btn-outline" id="cancelBatchModal">取消</button><button type="button" class="btn-primary-solid" id="confirmBatchBtn">确认设置</button></div></div></div>
+<div id="recycleBinModal" class="modal"><div class="modal-content"><div class="flex-between"><h3>回收站</h3><span class="close-modal" id="closeRecycleBinModal">&times;</span></div><div class="batch-bar"><button class="btn-outline" id="restoreSelectedBtn"><i class="fas fa-undo"></i> 恢复选中</button><button class="btn-outline" id="deleteSelectedPermanentlyBtn" style="color:#d9534f;"><i class="fas fa-trash"></i> 彻底删除选中</button><button class="btn-outline" id="emptyRecycleBinBtn" style="color:#d9534f;"><i class="fas fa-dumpster"></i> 清空回收站</button></div><div id="recycleBinList"></div></div></div>
+<div id="historyModal" class="modal"><div class="modal-content"><div class="flex-between"><h3>操作历史</h3><span class="close-modal" id="closeHistoryModal">&times;</span></div><div id="historyList"></div></div></div>
+<div id="lightbox" class="lightbox"><img id="lightboxImg" src=""><span style="position:absolute; top:20px; right:30px; color:white; font-size:32px; cursor:pointer;" id="closeLightbox">&times;</span></div>
+
+<script>
+(function(){
+    // 存储键名
+    const STORAGE_GROUPS = "ProductCostGroups_v16";
+    const STORAGE_PRODUCT_NAMES = "ProductCostProductNames_v16";
+    const STORAGE_SKUS = "ProductCostSkus_v16";
+    const STORAGE_PACKAGES = "ProductCostPackages_v16";
+    const STORAGE_RECYCLE_BIN = "ProductCostRecycleBin_v16";
+    const STORAGE_PROFIT_SETTINGS = "ProfitCalculatorSettings_v1";
+
+    let groups = [], productNames = [], skus = [], packages = [], recycleBin = { skus: [], packages: [] };
+    let expandedGroups = new Set(), expandedProductNames = new Map(), globalSearchKeyword = "", selectedItems = new Set(), batchMode = false;
+
+    // 利润计算器多选状态
+    let profitSelectedMap = new Map(); // key: "sku_123" 或 "pkg_456", value: { id, type, name, cost }
+    
+    function generateId() { return Date.now() + Math.floor(Math.random() * 1000000); }
+    function computeSkuTotal(sku) { return (Number(sku.bareCost)||0) + (Number(sku.freightCost)||0) + (Number(sku.otherCost)||0); }
+    function computePackageTotal(pkg) { let total = 0; if(pkg.items) for(let it of pkg.items) { let sku = skus.find(s => s.id === it.skuId); if(sku) total += computeSkuTotal(sku) * (it.quantity || 1); } return total; }
+    function getPackageDetails(pkg) { let details = []; if(pkg.items) for(let it of pkg.items) { let sku = skus.find(s => s.id === it.skuId); let productNameObj = sku ? productNames.find(pn => pn.id === sku.productNameId) : null; details.push({ productName: productNameObj ? productNameObj.name : "已删除商品", skuCode: sku ? sku.sku : "已删除SKU", quantity: it.quantity, unitTotal: sku ? computeSkuTotal(sku) : 0, skuId: it.skuId }); } return details; }
+    function addSkuHistory(skuId, action, detail) { let sku = skus.find(s => s.id === skuId); if(sku) { if(!sku.history) sku.history = []; sku.history.unshift({ timestamp: new Date().toLocaleString(), action: action, detail: detail }); if(sku.history.length > 30) sku.history.pop(); if(sku.productNameId) addProductHistory(sku.productNameId, action, detail); saveAll(); } }
+    function addProductHistory(productNameId, action, detail) { let product = productNames.find(p => p.id === productNameId); if(product) { if(!product.history) product.history = []; product.history.unshift({ timestamp: new Date().toLocaleString(), action: action, detail: detail }); if(product.history.length > 50) product.history.pop(); saveAll(); } }
+    function addPackageHistory(pkgId, action, detail) { let pkg = packages.find(p => p.id === pkgId); if(pkg) { if(!pkg.history) pkg.history = []; pkg.history.unshift({ timestamp: new Date().toLocaleString(), action: action, detail: detail }); if(pkg.history.length > 30) pkg.history.pop(); saveAll(); } }
+    function moveToRecycleBin(type, item) { let recycledItem = JSON.parse(JSON.stringify(item)); recycledItem.deletedAt = new Date().toLocaleString(); if(type === 'sku') { recycleBin.skus.push(recycledItem); skus = skus.filter(s => s.id !== item.id); packages.forEach(pkg => { if(pkg.items) pkg.items = pkg.items.filter(it => it.skuId !== item.id); }); } else { recycleBin.packages.push(recycledItem); packages = packages.filter(p => p.id !== item.id); } saveAll(); renderAll(); }
+    function restoreFromRecycleBin(type, itemId) { if(type === 'sku') { let idx = recycleBin.skus.findIndex(s => s.id === itemId); if(idx !== -1) { let item = recycleBin.skus[idx]; delete item.deletedAt; skus.push(item); recycleBin.skus.splice(idx,1); } } else { let idx = recycleBin.packages.findIndex(p => p.id === itemId); if(idx !== -1) { let item = recycleBin.packages[idx]; delete item.deletedAt; packages.push(item); recycleBin.packages.splice(idx,1); } } saveAll(); renderAll(); showRecycleBin(); }
+    function permanentDelete(type, itemId) { if(type === 'sku') recycleBin.skus = recycleBin.skus.filter(s => s.id !== itemId); else recycleBin.packages = recycleBin.packages.filter(p => p.id !== itemId); saveAll(); showRecycleBin(); renderAll(); }
+    function emptyRecycleBin() { if(confirm("彻底清空回收站？")) { recycleBin = { skus: [], packages: [] }; saveAll(); showRecycleBin(); renderAll(); } }
+    function saveAll() { localStorage.setItem(STORAGE_GROUPS, JSON.stringify(groups)); localStorage.setItem(STORAGE_PRODUCT_NAMES, JSON.stringify(productNames)); localStorage.setItem(STORAGE_SKUS, JSON.stringify(skus)); localStorage.setItem(STORAGE_PACKAGES, JSON.stringify(packages)); localStorage.setItem(STORAGE_RECYCLE_BIN, JSON.stringify(recycleBin)); }
+    function loadData() { 
+        let g = localStorage.getItem(STORAGE_GROUPS); groups = g ? JSON.parse(g) : [{id: 100, name: "默认分类"}];
+        let pn = localStorage.getItem(STORAGE_PRODUCT_NAMES); productNames = pn ? JSON.parse(pn) : [];
+        let s = localStorage.getItem(STORAGE_SKUS); skus = s ? JSON.parse(s) : [];
+        let pk = localStorage.getItem(STORAGE_PACKAGES); packages = pk ? JSON.parse(pk) : [];
+        let rb = localStorage.getItem(STORAGE_RECYCLE_BIN); recycleBin = rb ? JSON.parse(rb) : { skus: [], packages: [] };
+        productNames.forEach(pn => { if(!pn.history) pn.history = []; });
+        skus.forEach(sku => { if(!sku.history) sku.history = []; if(!sku.remarks) sku.remarks = []; if(!sku.createdAt) sku.createdAt = new Date().toLocaleString(); if(!sku.updatedAt) sku.updatedAt = new Date().toLocaleString(); });
+        packages.forEach(pkg => {
+            if(!pkg.history) pkg.history = [];
+            if(!pkg.remarks) pkg.remarks = [];
+            if(!pkg.createdAt) pkg.createdAt = new Date().toLocaleString();
+            if(!pkg.updatedAt) pkg.updatedAt = new Date().toLocaleString();
+            if(pkg.productNameId === undefined) {
+                if(pkg.items && pkg.items.length) {
+                    let firstSku = skus.find(s => s.id === pkg.items[0].skuId);
+                    if(firstSku) pkg.productNameId = firstSku.productNameId;
+                    else pkg.productNameId = null;
+                } else {
+                    pkg.productNameId = null;
+                }
+            }
+        });
+        if(skus.length === 0) {
+            let defaultGroup = groups[0].id;
+            let pn1 = { id: generateId(), groupId: defaultGroup, name: "商务笔记本", history: [] };
+            let pn2 = { id: generateId(), groupId: defaultGroup, name: "金属笔", history: [] };
+            productNames.push(pn1, pn2);
+            skus.push({ id: generateId(), productNameId: pn1.id, sku: "NB-001", imageUrl: "https://picsum.photos/id/20/80/80", bareCost: 12.5, freightCost: 2, otherCost: 0.5, remarks: [], history: [], createdAt: new Date().toLocaleString(), updatedAt: new Date().toLocaleString() });
+            skus.push({ id: generateId(), productNameId: pn2.id, sku: "PEN-002", imageUrl: "https://picsum.photos/id/21/80/80", bareCost: 5.8, freightCost: 1, otherCost: 0.2, remarks: [], history: [], createdAt: new Date().toLocaleString(), updatedAt: new Date().toLocaleString() });
+            packages.push({ id: generateId(), groupId: defaultGroup, productNameId: pn1.id, name: "学霸套装", imageUrl: "https://picsum.photos/id/0/80/80", items: [{ skuId: skus[0].id, quantity: 2 }, { skuId: skus[1].id, quantity: 3 }], remarks: [], history: [], createdAt: new Date().toLocaleString(), updatedAt: new Date().toLocaleString() });
+            saveAll();
+        }
+        groups.forEach(g => expandedGroups.add(g.id));
+        expandedProductNames.clear();
+        groups.forEach(g => {
+            let pnIds = productNames.filter(pn => pn.groupId === g.id).map(pn => pn.id);
+            expandedProductNames.set(g.id, new Set(pnIds));
+        });
+    }
+    function matchesSearch(item) { if(!globalSearchKeyword) return true; let kw = globalSearchKeyword.toLowerCase(); let productNameObj = productNames.find(pn => pn.id === item.productNameId); let productName = productNameObj ? productNameObj.name : ""; return productName.toLowerCase().includes(kw) || item.sku.toLowerCase().includes(kw) || (item.remarks && item.remarks.some(r => r.text.toLowerCase().includes(kw))); }
+    function matchesSearchPkg(pkg) { if(!globalSearchKeyword) return true; let kw = globalSearchKeyword.toLowerCase(); return pkg.name.toLowerCase().includes(kw) || (pkg.remarks && pkg.remarks.some(r => r.text.toLowerCase().includes(kw))) || getPackageDetails(pkg).some(d => d.productName.toLowerCase().includes(kw) || d.skuCode.toLowerCase().includes(kw)); }
+    function renderAll() { let container = document.getElementById("groupsContainer"); if(!groups.length){ container.innerHTML=""; return; } let html=''; groups.forEach(group=>{ let groupProductNames=productNames.filter(pn=>pn.groupId===group.id); let isGroupExpanded=expandedGroups.has(group.id); html+=`<div class="card" data-group-id="${group.id}"><div class="card-header ${!isGroupExpanded?'collapsed':''}" data-group-toggle="${group.id}"><span><i class="fas fa-folder-open"></i> ${escapeHtml(group.name)} <span class="badge">商品${groupProductNames.length} 套餐${packages.filter(p=>p.groupId===group.id).length}</span></span><div style="display:flex; gap:8px;"><button class="btn-icon edit-group" data-id="${group.id}"><i class="fas fa-edit"></i></button><button class="btn-icon delete-group" data-id="${group.id}"><i class="fas fa-trash"></i></button><i class="fas fa-chevron-down"></i></div></div><div class="card-body ${!isGroupExpanded?'collapsed':''}" data-group-body="${group.id}">${renderProductNames(group.id, groupProductNames)}</div></div>`; }); container.innerHTML=html; attachGroupEvents(); attachProductNameEvents(); bindImageZoom(); updateSelectedCount(); bindBatchCheckboxEvents(); }
+    function renderProductNames(groupId, productNamesList) { if(productNamesList.length===0) return '<div class="badge" style="padding:12px;">暂无商品，请点击上方“新增单品”创建</div>'; let html=''; let expandedSet=expandedProductNames.get(groupId)||new Set(); productNamesList.forEach(pn=>{ let groupSkus=skus.filter(s=>s.productNameId===pn.id && matchesSearch(s)); let groupPackages = packages.filter(pkg => pkg.productNameId === pn.id && matchesSearchPkg(pkg)); let isExpanded=expandedSet.has(pn.id); html+=`<div class="product-name-block" data-pn-id="${pn.id}"><div class="product-name-header ${!isExpanded?'collapsed':''}" data-pn-toggle="${pn.id}"><span><i class="fas fa-chevron-right"></i> ${escapeHtml(pn.name)} <span class="badge">${groupSkus.length}个规格 / ${groupPackages.length}个套餐</span></span><div><button class="btn-icon view-product-history" data-pn-id="${pn.id}" title="查看商品历史"><i class="fas fa-history"></i></button></div></div><div class="product-content ${!isExpanded?'collapsed':''}" data-product-content="${pn.id}">${groupSkus.map(sku=>renderSkuItem(sku)).join('')}${groupPackages.map(pkg=>renderPackageItem(pkg)).join('')}</div></div>`; }); return html; }
+    function renderSkuItem(sku){ let total=computeSkuTotal(sku).toFixed(2); let imgUrl=sku.imageUrl||'https://via.placeholder.com/44?text=NoImg'; let checked=batchMode&&selectedItems.has(`sku_${sku.id}`)?'checked':''; let checkboxHtml=batchMode?`<input type="checkbox" class="item-checkbox" data-type="sku" data-id="${sku.id}" ${checked}>`:''; return `<div class="sku-item"><div class="item-header">${checkboxHtml}<img class="item-img" src="${escapeHtml(imgUrl)}" data-fullimg="${escapeHtml(imgUrl)}"><div class="item-info"><div class="item-sku-code">${escapeHtml(sku.sku)}</div></div><div class="item-cost">¥${total}</div><div class="item-actions"><button class="btn-icon action-btn" data-type="sku" data-id="${sku.id}"><i class="fas fa-ellipsis-v"></i> 操作</button></div></div><div class="detail-panel" id="sku-detail-${sku.id}" style="display:none;"><div class="cost-detail"><span>裸:¥${(sku.bareCost||0).toFixed(2)}</span><span>运费:¥${(sku.freightCost||0).toFixed(2)}</span><span>其他:¥${(sku.otherCost||0).toFixed(2)}</span><span><strong>总:¥${total}</strong></span></div>${sku.remarks&&sku.remarks.length?`<div class="remarks-list">📝 ${sku.remarks.map(r=>`<div>${escapeHtml(r.text)} <small>${r.timestamp||''}</small></div>`).join('')}</div>`:'<div class="badge">暂无备注</div>'}</div></div>`; }
+    function renderPackageItem(pkg){ let total=computePackageTotal(pkg).toFixed(2); let imgUrl=pkg.imageUrl||'https://via.placeholder.com/44?text=套餐'; let details=getPackageDetails(pkg); let comboHtml=details.map(d=>`<div>${escapeHtml(d.productName)} ${escapeHtml(d.skuCode)} (¥${d.unitTotal.toFixed(2)}) x${d.quantity}</div>`).join(''); let checked=batchMode&&selectedItems.has(`package_${pkg.id}`)?'checked':''; let checkboxHtml=batchMode?`<input type="checkbox" class="item-checkbox" data-type="package" data-id="${pkg.id}" ${checked}>`:''; return `<div class="pkg-item"><div class="item-header">${checkboxHtml}<img class="item-img" src="${escapeHtml(imgUrl)}" data-fullimg="${escapeHtml(imgUrl)}"><div class="item-info"><div class="item-sku-code">${escapeHtml(pkg.name)} <span class="badge">套餐</span></div></div><div class="item-cost">¥${total}</div><div class="item-actions"><button class="btn-icon action-btn" data-type="package" data-id="${pkg.id}"><i class="fas fa-ellipsis-v"></i> 操作</button></div></div><div class="detail-panel" id="package-detail-${pkg.id}" style="display:none;"><div class="cost-detail"><strong>组合明细:</strong><br>${comboHtml||'无有效单品'}</div>${pkg.remarks&&pkg.remarks.length?`<div class="remarks-list">📝 ${pkg.remarks.map(r=>`<div>${escapeHtml(r.text)} <small>${r.timestamp||''}</small></div>`).join('')}</div>`:'<div class="badge">暂无备注</div>'}</div></div>`; }
+    function toggleDetail(type, id) { let panel = document.getElementById(`${type}-detail-${id}`); if(panel) panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'block' : 'none'; }
+    function bindImageZoom() { document.querySelectorAll('.item-img').forEach(img => { img.removeEventListener('click', imageZoom); img.addEventListener('click', imageZoom); }); function imageZoom(e) { e.stopPropagation(); let url = this.getAttribute('data-fullimg') || this.src; document.getElementById("lightboxImg").src = url; document.getElementById("lightbox").style.display = "flex"; } }
+    function attachGroupEvents() { /* 保持原样，省略具体实现以节省篇幅，实际已完整保留 */ 
+        const container = document.getElementById("groupsContainer");
+        if(!container) return;
+        container.querySelectorAll('.card-header').forEach(header => { header.removeEventListener('click', groupHeaderClick); header.addEventListener('click', groupHeaderClick); });
+        function groupHeaderClick(e) { if(e.target.closest('.edit-group') || e.target.closest('.delete-group')) return; const id = parseInt(this.getAttribute('data-group-toggle')); if(expandedGroups.has(id)) expandedGroups.delete(id); else expandedGroups.add(id); renderAll(); }
+        container.querySelectorAll('.edit-group').forEach(btn => { btn.removeEventListener('click', editGroup); btn.addEventListener('click', editGroup); });
+        function editGroup(e) { e.stopPropagation(); const id = parseInt(this.getAttribute('data-id')); let newName = prompt("新分类名", groups.find(g=>g.id===id)?.name); if(newName?.trim()) { groups.find(g=>g.id===id).name = newName.trim(); saveAll(); renderAll(); } }
+        container.querySelectorAll('.delete-group').forEach(btn => { btn.removeEventListener('click', deleteGroup); btn.addEventListener('click', deleteGroup); });
+        function deleteGroup(e) { e.stopPropagation(); const id = parseInt(this.getAttribute('data-id')); const pwd = prompt("删除分类需要验证密码 (密码: 123456):"); if(pwd !== "123456") { alert("密码错误，删除取消"); return; } const group = groups.find(g => g.id === id); if(!group) return; if(groups.length === 1) { alert("至少保留一个分类，无法删除"); return; } const hasProducts = productNames.some(pn => pn.groupId === id); const hasPackages = packages.some(pkg => pkg.groupId === id); if(hasProducts || hasPackages) { alert(`分类「${group.name}」下还有商品，请先清空后再删除分类`); return; } if(confirm(`确定删除分类「${group.name}」吗？`)) { groups = groups.filter(g => g.id !== id); saveAll(); renderAll(); alert(`分类已删除`); } }
+    }
+    function attachProductNameEvents() { /* 保持原样 */ 
+        const container = document.getElementById("groupsContainer");
+        if(!container) return;
+        container.querySelectorAll('.product-name-header').forEach(header => { header.removeEventListener('click', productNameToggle); header.addEventListener('click', productNameToggle); });
+        function productNameToggle(e) { if(e.target.closest('.view-product-history')) return; const pnId = parseInt(this.getAttribute('data-pn-toggle')); const groupCard = this.closest('.card'); const groupId = parseInt(groupCard.getAttribute('data-group-id')); let expandedSet = expandedProductNames.get(groupId) || new Set(); if(expandedSet.has(pnId)) expandedSet.delete(pnId); else expandedSet.add(pnId); expandedProductNames.set(groupId, expandedSet); renderAll(); }
+        container.querySelectorAll('.view-product-history').forEach(btn => { btn.removeEventListener('click', viewProductHistory); btn.addEventListener('click', viewProductHistory); });
+        function viewProductHistory(e) { e.stopPropagation(); const pnId = parseInt(this.getAttribute('data-pn-id')); let product = productNames.find(p => p.id === pnId); if(product) { let history = product.history || []; let html = history.map(h => `<div style="border-bottom:1px solid #eee; padding:6px;"><small>${h.timestamp}</small><br>${escapeHtml(h.action)} ${escapeHtml(h.detail)}</div>`).join(''); if(!html) html = '<div class="badge">暂无操作记录</div>'; document.getElementById("historyList").innerHTML = html; document.getElementById("historyModal").style.display = "flex"; } }
+    }
+    function initGlobalActionMenu() { /* 保持原样，节省篇幅 */ 
+        document.body.addEventListener('click', function(e) { const btn = e.target.closest('.action-btn'); if(!btn) return; e.preventDefault(); e.stopPropagation(); const type = btn.getAttribute('data-type'); const id = parseInt(btn.getAttribute('data-id')); if(window.currentActionMenu) window.currentActionMenu.remove(); const menu = document.createElement('div'); menu.className = 'action-menu'; const rect = btn.getBoundingClientRect(); menu.style.top = rect.bottom + window.scrollY + 'px'; menu.style.left = rect.left + window.scrollX + 'px'; const actions = [ { label: '明细', action: () => toggleDetail(type, id) }, { label: '编辑', action: () => editItem(type, id) }, { label: '删除(移入回收站)', action: () => deleteItemToRecycle(type, id) }, { label: '历史', action: () => showItemHistory(type, id) } ]; actions.forEach(act => { const item = document.createElement('button'); item.textContent = act.label; item.onclick = (ev) => { ev.stopPropagation(); act.action(); menu.remove(); window.currentActionMenu = null; }; menu.appendChild(item); }); document.body.appendChild(menu); window.currentActionMenu = menu; const closeHandler = (ev) => { if(!menu.contains(ev.target) && ev.target !== btn) { menu.remove(); window.currentActionMenu = null; document.removeEventListener('click', closeHandler); } }; setTimeout(() => document.addEventListener('click', closeHandler), 0); }); 
+    }
+    function editItem(type, id) { if(type === 'sku') openSkuModal(id); else openPackageModal(id); }
+    function deleteItemToRecycle(type, id) { if(confirm("确定将此商品移入回收站吗？")) { if(type === 'sku') { const sku = skus.find(s => s.id === id); if(sku) moveToRecycleBin('sku', sku); } else { const pkg = packages.find(p => p.id === id); if(pkg) moveToRecycleBin('package', pkg); } } }
+    function showItemHistory(type, id) { let item = null; if(type === 'sku') item = skus.find(s => s.id === id); else item = packages.find(p => p.id === id); if(item) { let history = item.history || []; let html = history.map(h => `<div style="border-bottom:1px solid #eee; padding:6px;"><small>${h.timestamp}</small><br>${escapeHtml(h.action)} ${escapeHtml(h.detail)}</div>`).join(''); if(!html) html = '<div class="badge">暂无操作记录</div>'; document.getElementById("historyList").innerHTML = html; document.getElementById("historyModal").style.display = "flex"; } }
+    function updateSelectedCount() { let span = document.getElementById("selectedCount"); if(span) span.innerText = `已选${selectedItems.size}项`; document.querySelectorAll('.item-checkbox').forEach(cb => { const type = cb.getAttribute('data-type'); const id = cb.getAttribute('data-id'); const key = `${type}_${id}`; cb.checked = selectedItems.has(key); }); }
+    function bindBatchCheckboxEvents() { document.querySelectorAll('.item-checkbox').forEach(cb => { cb.removeEventListener('change', handleCheckboxChange); cb.addEventListener('change', handleCheckboxChange); }); }
+    function handleCheckboxChange(e) { if(!batchMode) return; const cb = e.target; const type = cb.getAttribute('data-type'); const id = cb.getAttribute('data-id'); const key = `${type}_${id}`; if(cb.checked) selectedItems.add(key); else selectedItems.delete(key); updateSelectedCount(); }
+    function exitBatchMode() { batchMode=false; selectedItems.clear(); document.getElementById("batchActionBar").style.display="none"; renderAll(); }
+    function selectAll() { document.querySelectorAll('.item-checkbox').forEach(cb=>{ let type=cb.getAttribute('data-type'),id=cb.getAttribute('data-id'); if(type) selectedItems.add(`${type}_${id}`); cb.checked=true; }); updateSelectedCount(); }
+    function deselectAll() { selectedItems.clear(); document.querySelectorAll('.item-checkbox').forEach(cb=>cb.checked=false); updateSelectedCount(); }
+    function batchSetCategory(targetGroupId) { const selected = Array.from(selectedItems); if(selected.length === 0) { alert("请先勾选要修改分类的商品"); return; } selected.forEach(key => { const [type, id] = key.split('_'); if(type === 'sku') { const sku = skus.find(s => s.id === parseInt(id)); if(sku) { const product = productNames.find(pn => pn.id === sku.productNameId); if(product) { product.groupId = targetGroupId; addSkuHistory(sku.id, "批量修改分类", `移至分类 ${groups.find(g=>g.id===targetGroupId)?.name}`); } } } else { const pkg = packages.find(p => p.id === parseInt(id)); if(pkg) { pkg.groupId = targetGroupId; addPackageHistory(pkg.id, "批量修改分类", `移至分类 ${groups.find(g=>g.id===targetGroupId)?.name}`); } } }); selectedItems.clear(); saveAll(); renderAll(); alert(`已将 ${selected.length} 个商品移至指定分类`); exitBatchMode(); }
+    function batchDeleteToRecycle() { const selected = Array.from(selectedItems); if(selected.length === 0) { alert("请先勾选要删除的商品"); return; } if(confirm(`确定将选中的 ${selected.length} 个商品移入回收站吗？`)) { selected.forEach(key => { const [type, id] = key.split('_'); if(type === 'sku') { const sku = skus.find(s => s.id === parseInt(id)); if(sku) moveToRecycleBin('sku', sku); } else { const pkg = packages.find(p => p.id === parseInt(id)); if(pkg) moveToRecycleBin('package', pkg); } }); selectedItems.clear(); renderAll(); exitBatchMode(); } }
+    function showRecycleBin() { /* 省略，保持原有 */ 
+        const modal = document.getElementById("recycleBinModal"); const container = document.getElementById("recycleBinList"); let html = ''; if(recycleBin.skus.length === 0 && recycleBin.packages.length === 0) { html = '<div class="badge" style="padding:20px; text-align:center;">回收站为空</div>'; } else { html = '<div class="checkbox-group" style="margin-bottom:8px;"><label><input type="checkbox" id="selectAllRecycleBin"> 全选</label></div>'; recycleBin.skus.forEach(sku => { const product = productNames.find(pn => pn.id === sku.productNameId); const productName = product ? product.name : "已删除商品"; html += `<div class="sku-item" style="margin-bottom:8px;"><div class="item-header"><input type="checkbox" class="recycle-checkbox" data-type="sku" data-id="${sku.id}"><img class="item-img" src="${escapeHtml(sku.imageUrl || 'https://via.placeholder.com/44')}"><div class="item-info"><div>${escapeHtml(productName)} / ${escapeHtml(sku.sku)}</div><div class="badge">删除时间: ${sku.deletedAt}</div></div><div class="item-cost">¥${computeSkuTotal(sku).toFixed(2)}</div><div class="item-actions"><button class="btn-icon restore-item" data-type="sku" data-id="${sku.id}"><i class="fas fa-undo"></i> 恢复</button><button class="btn-icon delete-permanent" data-type="sku" data-id="${sku.id}" style="color:#d9534f;"><i class="fas fa-trash"></i> 彻底删除</button></div></div></div>`; }); recycleBin.packages.forEach(pkg => { html += `<div class="pkg-item" style="margin-bottom:8px;"><div class="item-header"><input type="checkbox" class="recycle-checkbox" data-type="package" data-id="${pkg.id}"><img class="item-img" src="${escapeHtml(pkg.imageUrl || 'https://via.placeholder.com/44')}"><div class="item-info"><div>${escapeHtml(pkg.name)} <span class="badge">套餐</span></div><div class="badge">删除时间: ${pkg.deletedAt}</div></div><div class="item-cost">¥${computePackageTotal(pkg).toFixed(2)}</div><div class="item-actions"><button class="btn-icon restore-item" data-type="package" data-id="${pkg.id}"><i class="fas fa-undo"></i> 恢复</button><button class="btn-icon delete-permanent" data-type="package" data-id="${pkg.id}" style="color:#d9534f;"><i class="fas fa-trash"></i> 彻底删除</button></div></div></div>`; }); } container.innerHTML = html; document.getElementById("selectAllRecycleBin")?.addEventListener('change', (e) => { document.querySelectorAll('.recycle-checkbox').forEach(cb => { cb.checked = e.target.checked; const type = cb.getAttribute('data-type'); const id = cb.getAttribute('data-id'); const key = `${type}_${id}`; if(e.target.checked) selectedItems.add(key); else selectedItems.delete(key); }); }); document.querySelectorAll('.recycle-checkbox').forEach(cb => { cb.addEventListener('change', (e) => { const type = cb.getAttribute('data-type'); const id = cb.getAttribute('data-id'); const key = `${type}_${id}`; if(cb.checked) selectedItems.add(key); else selectedItems.delete(key); }); }); document.querySelectorAll('.restore-item').forEach(btn => { btn.addEventListener('click', () => { const type = btn.getAttribute('data-type'); const id = parseInt(btn.getAttribute('data-id')); restoreFromRecycleBin(type, id); }); }); document.querySelectorAll('.delete-permanent').forEach(btn => { btn.addEventListener('click', () => { if(confirm("彻底删除？不可恢复！")) { const type = btn.getAttribute('data-type'); const id = parseInt(btn.getAttribute('data-id')); permanentDelete(type, id); } }); }); modal.style.display = "flex"; 
+    }
+    
+    // 套餐三级树形选择器 (原有)
+    function renderPackageTree(selectedMap) {
+        const container = document.getElementById("pkgItemsContainer");
+        if(!skus.length) { container.innerHTML = '<div class="badge">暂无单品，请先创建单品</div>'; return; }
+        let groupsCopy = [...groups];
+        let html = '';
+        for(let group of groupsCopy) {
+            let productList = productNames.filter(pn => pn.groupId === group.id);
+            if(productList.length === 0) continue;
+            html += `<div class="combo-tree-group" data-group-id="${group.id}"><div class="combo-group-header"><i class="fas fa-chevron-down"></i> ${escapeHtml(group.name)}</div><div class="combo-group-content">`;
+            for(let product of productList) {
+                let skusOfProduct = skus.filter(s => s.productNameId === product.id);
+                if(skusOfProduct.length === 0) continue;
+                html += `<div class="combo-product-item"><div class="combo-product-header"><i class="fas fa-chevron-down"></i> ${escapeHtml(product.name)}</div><div class="combo-sku-list">`;
+                for(let sku of skusOfProduct) {
+                    let qty = selectedMap.get(sku.id) || 1;
+                    let total = computeSkuTotal(sku);
+                    html += `<div class="combo-sku-row" data-skuid="${sku.id}"><input type="checkbox" class="pkg-sku-chk" value="${sku.id}" ${selectedMap.has(sku.id)?'checked':''}><img src="${escapeHtml(sku.imageUrl||'https://via.placeholder.com/36')}" onerror="this.src='https://via.placeholder.com/36'"><div class="combo-sku-info"><strong>${escapeHtml(sku.sku)}</strong><div class="combo-sku-cost">单价: ¥${total.toFixed(2)}</div></div><input type="number" min="0.5" step="0.5" value="${qty}" class="pkg-sku-qty" data-skuid="${sku.id}" style="width:70px;" ${!selectedMap.has(sku.id)?'disabled':''}></div>`;
+                }
+                html += `</div></div>`;
+            }
+            html += `</div></div>`;
+        }
+        container.innerHTML = html;
+        container.querySelectorAll('.combo-group-header').forEach(header => {
+            header.addEventListener('click', (e) => { e.stopPropagation(); let content = header.parentElement.querySelector('.combo-group-content'); content.classList.toggle('collapsed'); header.classList.toggle('collapsed'); });
+        });
+        container.querySelectorAll('.combo-product-header').forEach(header => {
+            header.addEventListener('click', (e) => { e.stopPropagation(); let list = header.parentElement.querySelector('.combo-sku-list'); list.classList.toggle('collapsed'); header.classList.toggle('collapsed'); });
+        });
+        container.querySelectorAll('.pkg-sku-chk').forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                let skuId = parseInt(chk.value);
+                let qtyInput = container.querySelector(`.pkg-sku-qty[data-skuid="${skuId}"]`);
+                if(qtyInput) qtyInput.disabled = !chk.checked;
+                updatePackageTotalPreviewFromTree();
+            });
+        });
+        container.querySelectorAll('.pkg-sku-qty').forEach(inp => {
+            inp.addEventListener('input', () => updatePackageTotalPreviewFromTree());
+        });
+        updatePackageTotalPreviewFromTree();
+    }
+    function updatePackageTotalPreviewFromTree() {
+        let total = 0;
+        document.querySelectorAll('#pkgItemsContainer .pkg-sku-chk:checked').forEach(chk => {
+            let skuId = parseInt(chk.value);
+            let qtyInput = document.querySelector(`#pkgItemsContainer .pkg-sku-qty[data-skuid="${skuId}"]`);
+            let qty = qtyInput ? parseFloat(qtyInput.value) || 0 : 0;
+            let sku = skus.find(s => s.id === skuId);
+            if(sku) total += computeSkuTotal(sku) * qty;
+        });
+        document.getElementById("pkgTotalPreview").innerText = `套餐总价: ¥${total.toFixed(2)}`;
+    }
+    function collectPackageItemsFromTree() {
+        let items = [];
+        document.querySelectorAll('#pkgItemsContainer .pkg-sku-chk:checked').forEach(chk => {
+            let skuId = parseInt(chk.value);
+            let qtyInput = document.querySelector(`#pkgItemsContainer .pkg-sku-qty[data-skuid="${skuId}"]`);
+            let qty = qtyInput ? parseFloat(qtyInput.value) || 1 : 1;
+            items.push({ skuId, quantity: qty });
+        });
+        return items;
+    }
+    
+    let currentPkgId = null;
+    function openPackageModal(id=null) {
+        currentPkgId = id;
+        document.getElementById("packageModalTitle").innerText = id ? "编辑套餐" : "新增套餐";
+        document.getElementById("pkgId").value = id || '';
+        let groupSelect = document.getElementById("pkgGroupSelect");
+        groupSelect.innerHTML = groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+        let productSelect = document.getElementById("pkgProductSelect");
+        let selectedMap = new Map();
+        function fillProductSelect(groupId, selectedProductId) {
+            let products = productNames.filter(pn => pn.groupId === parseInt(groupId));
+            productSelect.innerHTML = '<option value="">-- 请选择商品 --</option>' + products.map(p => `<option value="${p.id}" ${selectedProductId == p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
+            productSelect.disabled = products.length === 0;
+        }
+        if(id) {
+            let pkg = packages.find(p => p.id === id);
+            if(pkg) {
+                groupSelect.value = pkg.groupId;
+                fillProductSelect(pkg.groupId, pkg.productNameId);
+                document.getElementById("pkgName").value = pkg.name;
+                document.getElementById("pkgImage").value = pkg.imageUrl || '';
+                renderPkgRemarks(pkg.remarks || []);
+                if(pkg.items) for(let it of pkg.items) selectedMap.set(it.skuId, it.quantity);
+                previewImage(pkg.imageUrl, "packageImagePreview", "previewPkgImg");
+            }
+        } else {
+            let defaultGroup = groups[0]?.id || '';
+            groupSelect.value = defaultGroup;
+            fillProductSelect(defaultGroup, null);
+            document.getElementById("pkgName").value = "";
+            document.getElementById("pkgImage").value = "";
+            renderPkgRemarks([]);
+            document.getElementById("packageImagePreview").style.display = "none";
+        }
+        groupSelect.onchange = () => {
+            let gid = groupSelect.value;
+            fillProductSelect(gid, null);
+        };
+        renderPackageTree(selectedMap);
+        document.getElementById("packageModal").style.display = "flex";
+    }
+    function savePackage() {
+        let name = document.getElementById("pkgName").value.trim();
+        if(!name) { alert("套餐名称不能为空"); return false; }
+        let groupId = parseInt(document.getElementById("pkgGroupSelect").value);
+        if(isNaN(groupId)) { alert("请选择分类"); return false; }
+        let productNameId = parseInt(document.getElementById("pkgProductSelect").value);
+        if(isNaN(productNameId)) { alert("请选择所属商品"); return false; }
+        let imageUrl = document.getElementById("pkgImage").value;
+        let items = collectPackageItemsFromTree();
+        if(!items.length) { alert("请至少选择一种单品"); return false; }
+        let remarks = collectPkgRemarks();
+        let pkgId = document.getElementById("pkgId").value;
+        if(pkgId) {
+            let idx = packages.findIndex(p => p.id == pkgId);
+            if(idx !== -1) {
+                addPackageHistory(parseInt(pkgId), "编辑套餐", `修改了套餐 ${name}`);
+                packages[idx] = { ...packages[idx], name, imageUrl, items, remarks, groupId, productNameId, updatedAt: new Date().toLocaleString() };
+            }
+        } else {
+            let newId = generateId();
+            let newPkg = { id: newId, groupId, productNameId, name, imageUrl, items, remarks, history: [], createdAt: new Date().toLocaleString(), updatedAt: new Date().toLocaleString() };
+            addPackageHistory(newId, "创建套餐", `创建了套餐 ${name}`);
+            packages.push(newPkg);
+        }
+        saveAll();
+        renderAll();
+        document.getElementById("packageModal").style.display = "none";
+        return true;
+    }
+    function renderPkgRemarks(remarks) { let container=document.getElementById("pkgRemarksContainer"); container.innerHTML=''; remarks.forEach((r,idx)=>{ let div=document.createElement('div'); div.style.display='flex'; div.style.gap='8px'; div.style.marginBottom='6px'; div.innerHTML=`<input type="text" value="${escapeHtml(r.text)}" class="pkg-remark-text" style="flex:1;"><button type="button" class="btn-icon remove-pkg-remark" data-idx="${idx}"><i class="fas fa-trash"></i></button>`; container.appendChild(div); }); container.querySelectorAll('.remove-pkg-remark').forEach(btn=>{ btn.addEventListener('click',(e)=>{ let idx=parseInt(btn.getAttribute('data-idx')); let newRemarks=collectPkgRemarks(); newRemarks.splice(idx,1); renderPkgRemarks(newRemarks); }); }); }
+    function collectPkgRemarks() { let inputs=document.querySelectorAll('#pkgRemarksContainer .pkg-remark-text'); let arr=[]; inputs.forEach(inp=>{ if(inp.value.trim()) arr.push({text: inp.value.trim(), timestamp: new Date().toLocaleString()}); }); return arr; }
+    
+    // 修复导入正则，支持SKU含空格
+    function importXLSX(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, {type:'array'});
+            const skuSheet = wb.Sheets["单品"];
+            if(skuSheet) {
+                const rows = XLSX.utils.sheet_to_json(skuSheet);
+                if(rows.length) {
+                    skus = [];
+                    productNames = [];
+                    for(let row of rows) {
+                        let groupName = row["分类"] || "默认分类";
+                        let group = groups.find(g => g.name === groupName);
+                        if(!group) {
+                            group = { id: generateId(), name: groupName };
+                            groups.push(group);
+                        }
+                        let productNameRaw = row["商品名称"] || "未命名商品";
+                        let product = productNames.find(pn => pn.groupId === group.id && pn.name === productNameRaw);
+                        if(!product) {
+                            product = { id: generateId(), groupId: group.id, name: productNameRaw, history: [] };
+                            productNames.push(product);
+                        }
+                        let sku = { id: generateId(), productNameId: product.id, sku: row["SKU"] || "", imageUrl: row["图片链接"] || "", bareCost: Number(row["裸成本"]) || 0, freightCost: Number(row["运费"]) || 0, otherCost: Number(row["其他费用"]) || 0, remarks: row["备注"] ? [{text: row["备注"], timestamp: new Date().toLocaleString()}] : [], history: [], createdAt: new Date().toLocaleString(), updatedAt: new Date().toLocaleString() };
+                        skus.push(sku);
+                    }
+                }
+            }
+            const pkgSheet = wb.Sheets["套餐"];
+            if(pkgSheet) {
+                const rows = XLSX.utils.sheet_to_json(pkgSheet);
+                if(rows.length) {
+                    packages = [];
+                    for(let row of rows) {
+                        let groupName = row["分类"] || "默认分类";
+                        let group = groups.find(g => g.name === groupName);
+                        if(!group) { group = { id: generateId(), name: groupName }; groups.push(group); }
+                        let productNameRaw = row["所属商品"] || "";
+                        let product = null;
+                        if(productNameRaw) {
+                            product = productNames.find(pn => pn.groupId === group.id && pn.name === productNameRaw);
+                            if(!product) { product = { id: generateId(), groupId: group.id, name: productNameRaw, history: [] }; productNames.push(product); }
+                        }
+                        let packageName = row["套餐名称"] || "未命名套餐";
+                        let packageImage = row["套餐图片"] || "";
+                        let comboStr = row["组合详情"] || "";
+                        let items = [];
+                        if(comboStr) {
+                            // 改进正则：匹配 商品名称 + 可能带空格的SKU + x数量
+                            let parts = comboStr.split(',').map(p => p.trim());
+                            for(let part of parts) {
+                                // 新正则：捕获商品名称（尽量少匹配），然后捕获SKU（直到最后一个空格前，后面跟着x数字），最后捕获数量
+                                let match = part.match(/^(.+?)\s+(.+?)\s+x([\d.]+)$/i);
+                                if(match) {
+                                    let prodName = match[1].trim();
+                                    let skuCode = match[2].trim();
+                                    let quantity = parseFloat(match[3]);
+                                    let prod = productNames.find(pn => pn.name === prodName);
+                                    if(prod) {
+                                        let sku = skus.find(s => s.productNameId === prod.id && s.sku === skuCode);
+                                        if(sku) items.push({ skuId: sku.id, quantity: quantity });
+                                    }
+                                }
+                            }
+                        }
+                        let remarks = row["备注"] ? [{text: row["备注"], timestamp: new Date().toLocaleString()}] : [];
+                        packages.push({ id: generateId(), groupId: group.id, productNameId: product ? product.id : null, name: packageName, imageUrl: packageImage, items: items, remarks: remarks, history: [], createdAt: new Date().toLocaleString(), updatedAt: new Date().toLocaleString() });
+                    }
+                }
+            }
+            saveAll();
+            renderAll();
+            alert("导入完成！");
+        };
+        reader.readAsArrayBuffer(file);
+    }
+    
+    async function exportAsTable2() {
+       let channel = prompt("请输入渠道名称 (导出表格2的'渠道'列)", "厂家");
+       if(channel === null) return;
+       let rows = [];
+       for(let sku of skus) {
+           let product = productNames.find(pn => pn.id === sku.productNameId);
+           let productName = product ? product.name : "未知商品";
+           let createdAt = sku.createdAt || new Date().toLocaleString();
+           let updatedAt = sku.updatedAt || new Date().toLocaleString();
+           let historyArr = (sku.history || []).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+           let history1 = "", history2 = "";
+           if(historyArr.length>0) history1 = formatHistoryEntry(historyArr[0]);
+           if(historyArr.length>1) history2 = formatHistoryEntry(historyArr[1]);
+           let remark1 = (sku.remarks && sku.remarks.length) ? sku.remarks[0].text : "";
+           rows.push({ "渠道": channel, "商品名称": productName, "SKU/规格": sku.sku, "图片URL": sku.imageUrl || "", "裸成本": sku.bareCost || 0, "运费": sku.freightCost || 0, "其他费用": sku.otherCost || 0, "总成本": computeSkuTotal(sku), "创建时间": createdAt, "更新时间": updatedAt, "历史记录1": history1, "历史记录2": history2, "备注1": remark1 });
+       }
+       for(let pkg of packages) {
+           let createdAt = pkg.createdAt || new Date().toLocaleString();
+           let updatedAt = pkg.updatedAt || new Date().toLocaleString();
+           let historyArr = (pkg.history || []).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+           let history1 = "", history2 = "";
+           if(historyArr.length>0) history1 = formatHistoryEntry(historyArr[0]);
+           if(historyArr.length>1) history2 = formatHistoryEntry(historyArr[1]);
+           let remark1 = (pkg.remarks && pkg.remarks.length) ? pkg.remarks[0].text : "";
+           let parentProduct = pkg.productNameId ? productNames.find(pn => pn.id === pkg.productNameId) : null;
+           let productNameForPackage = parentProduct ? parentProduct.name : "";
+           let totalCost = computePackageTotal(pkg);
+           rows.push({ "渠道": channel, "商品名称": productNameForPackage, "SKU/规格": pkg.name, "图片URL": pkg.imageUrl || "", "裸成本": totalCost, "运费": 0, "其他费用": 0, "总成本": totalCost, "创建时间": createdAt, "更新时间": updatedAt, "历史记录1": history1, "历史记录2": history2, "备注1": remark1 });
+       }
+       let ws = XLSX.utils.json_to_sheet(rows);
+       let wb = XLSX.utils.book_new();
+       XLSX.utils.book_append_sheet(wb, ws, "商品信息");
+       let now = new Date();
+       let timestamp = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}_${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+       XLSX.writeFile(wb, `商品成本数据2-${timestamp}.xlsx`);
+    }
+    function formatHistoryEntry(entry) { if(!entry) return ''; return `${entry.timestamp} ${entry.action} ${entry.detail||''}`; }
+    function exportXLSX() { 
+        let skuSheet = skus.map(sku => { let product = productNames.find(pn=>pn.id===sku.productNameId); let group = groups.find(g=>g.id===(product?product.groupId:null)); let historyStr = (sku.history||[]).map(h=>`${h.timestamp} ${h.action} ${h.detail||''}`).join('; '); return { "分类": group?group.name:"", "商品名称": product?product.name:"", "SKU": sku.sku, "图片链接": sku.imageUrl||"", "裸成本": sku.bareCost, "运费": sku.freightCost, "其他费用": sku.otherCost, "总成本": computeSkuTotal(sku), "备注": (sku.remarks||[]).map(r=>r.text).join("; "), "历史记录": historyStr }; }); 
+        let pkgSheet = packages.map(pkg => { let group = groups.find(g=>g.id===pkg.groupId); let product = productNames.find(pn=>pn.id===pkg.productNameId); let combo = getPackageDetails(pkg).map(d=>`${d.productName} ${d.skuCode} x${d.quantity}`).join(', '); let historyStr = (pkg.history||[]).map(h=>`${h.timestamp} ${h.action} ${h.detail}`).join('; '); return { "分类": group?group.name:"", "所属商品": product?product.name:"", "套餐名称": pkg.name, "套餐图片": pkg.imageUrl||"", "组合详情": combo, "总成本": computePackageTotal(pkg), "备注": (pkg.remarks||[]).map(r=>r.text).join("; "), "历史记录": historyStr }; }); 
+        let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(skuSheet), "单品"); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pkgSheet), "套餐"); 
+        let now = new Date(); let timestamp = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}_${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`; XLSX.writeFile(wb, `商品成本管理_${timestamp}.xlsx`); 
+    }
+    
+    function clearAllWithPassword() { let pwd=prompt("输入清除密码:"); if(pwd==="123456"){ if(confirm("彻底清除所有数据？")){ groups=[{id:100,name:"默认分类"}]; productNames=[]; skus=[]; packages=[]; recycleBin={skus:[],packages:[]}; saveAll(); renderAll(); alert("已清除"); } }else alert("密码错误"); }
+    function setupGlobalSearch() { let input=document.getElementById("globalSearchInput"),clearBtn=document.getElementById("clearSearchBtn"); input.addEventListener("input",(e)=>{ globalSearchKeyword=e.target.value; clearBtn.style.display=globalSearchKeyword?"inline-block":"none"; renderAll(); }); clearBtn.addEventListener("click",()=>{ input.value=""; globalSearchKeyword=""; clearBtn.style.display="none"; renderAll(); }); }
+    function escapeHtml(str){ if(!str) return ''; return String(str).replace(/[&<>]/g,function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    function previewImage(url, containerId, imgId) { let container=document.getElementById(containerId),img=document.getElementById(imgId); if(url&&url.trim()){ img.src=url; container.style.display="flex"; img.onerror=()=>{ container.style.display="none"; }; }else{ container.style.display="none"; } }
+    function updateSkuTotal() { let bare=parseFloat(document.getElementById("skuBare").value)||0; let freight=parseFloat(document.getElementById("skuFreight").value)||0; let other=parseFloat(document.getElementById("skuOther").value)||0; document.getElementById("skuTotal").value=(bare+freight+other).toFixed(2); }
+    function collectSkuRemarks() { let inputs=document.querySelectorAll('#skuRemarksContainer .sku-remark-text'); let arr=[]; inputs.forEach(inp=>{ if(inp.value.trim()) arr.push({text:inp.value.trim(), timestamp:new Date().toLocaleString()}); }); return arr; }
+    function renderSkuRemarks(remarks) { let container=document.getElementById("skuRemarksContainer"); container.innerHTML=''; remarks.forEach((r,idx)=>{ let div=document.createElement('div'); div.style.display='flex'; div.style.gap='8px'; div.style.marginBottom='6px'; div.innerHTML=`<input type="text" value="${escapeHtml(r.text)}" class="sku-remark-text" style="flex:1;"><button type="button" class="btn-icon remove-sku-remark" data-idx="${idx}"><i class="fas fa-trash"></i></button>`; container.appendChild(div); }); container.querySelectorAll('.remove-sku-remark').forEach(btn=>{ btn.addEventListener('click',(e)=>{ let idx=parseInt(btn.getAttribute('data-idx')); let newRemarks=collectSkuRemarks(); newRemarks.splice(idx,1); renderSkuRemarks(newRemarks); }); }); }
+    function saveSkuLogic() { let groupId = parseInt(document.getElementById("skuGroupSelect").value); let productNameRaw = document.getElementById("productName").value.trim(); if(!productNameRaw) { alert("商品名称不能为空"); return false; } let skuCode = document.getElementById("skuCode").value.trim(); if(!skuCode) { alert("SKU不能为空"); return false; } let imageUrl = document.getElementById("skuImage").value; let bare = parseFloat(document.getElementById("skuBare").value) || 0; let freight = parseFloat(document.getElementById("skuFreight").value) || 0; let other = parseFloat(document.getElementById("skuOther").value) || 0; let remarks = collectSkuRemarks(); let product = productNames.find(pn => pn.groupId === groupId && pn.name === productNameRaw); if(!product) { product = { id: generateId(), groupId: groupId, name: productNameRaw, history: [] }; productNames.push(product); addProductHistory(product.id, "创建商品", `创建商品 ${productNameRaw}`); } let skuId = document.getElementById("skuId").value; if(skuId) { let idx = skus.findIndex(s => s.id == skuId); if(idx !== -1) { let oldSku = skus[idx]; let changes = []; if(oldSku.sku !== skuCode) changes.push(`SKU: ${oldSku.sku} → ${skuCode}`); if(oldSku.bareCost !== bare) changes.push(`裸成本: ${oldSku.bareCost} → ${bare}`); if(oldSku.freightCost !== freight) changes.push(`运费: ${oldSku.freightCost} → ${freight}`); if(oldSku.otherCost !== other) changes.push(`其他: ${oldSku.otherCost} → ${other}`); let detail = changes.length ? `修改了 ${changes.join(', ')}` : "更新了信息"; addSkuHistory(parseInt(skuId), "编辑SKU", detail); skus[idx] = { ...oldSku, productNameId: product.id, sku: skuCode, imageUrl, bareCost: bare, freightCost: freight, otherCost: other, remarks, updatedAt: new Date().toLocaleString() }; } } else { let newId = generateId(); let newSku = { id: newId, productNameId: product.id, sku: skuCode, imageUrl, bareCost: bare, freightCost: freight, otherCost: other, remarks, history: [], createdAt: new Date().toLocaleString(), updatedAt: new Date().toLocaleString() }; skus.push(newSku); addSkuHistory(newId, "创建SKU", `创建了SKU ${skuCode}`); } saveAll(); renderAll(); document.getElementById("skuModal").style.display = "none"; return true; }
+    function createNewGroupAndSelect(selectId) { let newName=prompt("新分类名称"); if(newName&&newName.trim()){ let newId=generateId(); groups.push({id:newId, name:newName.trim()}); saveAll(); let select=document.getElementById(selectId); select.innerHTML=groups.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join(''); select.value=newId; renderAll(); } }
+    
+    // ================== 利润计算器全新多选实现 ==================
+    let profitTreeState = { groups: new Map() };
+    
+    function renderProfitTree() {
+        const container = document.getElementById("profitProductTree");
+        if(!container) return;
+        let html = '';
+        for(let group of groups) {
+            let groupCollapsed = profitTreeState.groups.get(group.id) || false;
+            let productsInGroup = productNames.filter(pn => pn.groupId === group.id);
+            let hasProducts = false;
+            let groupContentHtml = '';
+            for(let product of productsInGroup) {
+                let skuList = skus.filter(s => s.productNameId === product.id);
+                let pkgList = packages.filter(p => p.productNameId === product.id);
+                if(skuList.length === 0 && pkgList.length === 0) continue;
+                hasProducts = true;
+                let productCollapsed = profitTreeState.groups.get(`product_${product.id}`) || false;
+                let itemsHtml = '';
+                // 单品
+                for(let sku of skuList) {
+                    let total = computeSkuTotal(sku);
+                    let checked = profitSelectedMap.has(`sku_${sku.id}`) ? 'checked' : '';
+                    itemsHtml += `<div class="profit-item-row">
+                        <input type="checkbox" class="profit-item-checkbox" data-type="sku" data-id="${sku.id}" data-cost="${total}" data-name="${escapeHtml(sku.sku)}" ${checked}>
+                        <div class="profit-item-info"><strong>${escapeHtml(sku.sku)}</strong> <span class="badge">单品</span></div>
+                        <div class="profit-item-cost">成本 ¥${total.toFixed(2)}</div>
+                    </div>`;
+                }
+                // 套餐
+                for(let pkg of pkgList) {
+                    let total = computePackageTotal(pkg);
+                    let checked = profitSelectedMap.has(`pkg_${pkg.id}`) ? 'checked' : '';
+                    itemsHtml += `<div class="profit-item-row">
+                        <input type="checkbox" class="profit-item-checkbox" data-type="pkg" data-id="${pkg.id}" data-cost="${total}" data-name="${escapeHtml(pkg.name)}" ${checked}>
+                        <div class="profit-item-info"><strong>${escapeHtml(pkg.name)}</strong> <span class="badge">套餐</span></div>
+                        <div class="profit-item-cost">成本 ¥${total.toFixed(2)}</div>
+                    </div>`;
+                }
+                groupContentHtml += `
+                    <div class="profit-tree-product">
+                        <div class="profit-tree-product-header ${productCollapsed ? 'collapsed' : ''}" data-product-id="${product.id}">
+                            <i class="fas fa-chevron-right"></i> ${escapeHtml(product.name)}
+                        </div>
+                        <div class="profit-tree-items ${productCollapsed ? 'collapsed' : ''}" data-product-items="${product.id}">
+                            ${itemsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+            if(!hasProducts) continue;
+            html += `
+                <div class="profit-tree-group">
+                    <div class="profit-tree-group-header ${groupCollapsed ? 'collapsed' : ''}" data-group-id="${group.id}">
+                        <i class="fas fa-folder-open"></i> ${escapeHtml(group.name)}
+                    </div>
+                    <div class="profit-tree-group-content ${groupCollapsed ? 'collapsed' : ''}" data-group-content="${group.id}">
+                        ${groupContentHtml}
+                    </div>
+                </div>
+            `;
+        }
+        if(html === '') html = '<div class="badge" style="padding:20px; text-align:center;">暂无任何产品，请先创建单品或套餐</div>';
+        container.innerHTML = html;
+        // 绑定折叠事件
+        document.querySelectorAll('.profit-tree-group-header').forEach(header => {
+            header.removeEventListener('click', profitGroupToggle);
+            header.addEventListener('click', profitGroupToggle);
+        });
+        document.querySelectorAll('.profit-tree-product-header').forEach(header => {
+            header.removeEventListener('click', profitProductToggle);
+            header.addEventListener('click', profitProductToggle);
+        });
+        // 绑定checkbox事件
+        document.querySelectorAll('.profit-item-checkbox').forEach(cb => {
+            cb.removeEventListener('change', profitCheckboxChange);
+            cb.addEventListener('change', profitCheckboxChange);
+        });
+    }
+    function profitGroupToggle(e) {
+        e.stopPropagation();
+        const header = e.currentTarget;
+        const groupId = parseInt(header.getAttribute('data-group-id'));
+        const content = document.querySelector(`.profit-tree-group-content[data-group-content="${groupId}"]`);
+        if(content) {
+            const isCollapsed = content.classList.contains('collapsed');
+            if(isCollapsed) {
+                content.classList.remove('collapsed');
+                header.classList.remove('collapsed');
+                profitTreeState.groups.set(groupId, false);
+            } else {
+                content.classList.add('collapsed');
+                header.classList.add('collapsed');
+                profitTreeState.groups.set(groupId, true);
+            }
+        }
+    }
+    function profitProductToggle(e) {
+        e.stopPropagation();
+        const header = e.currentTarget;
+        const productId = parseInt(header.getAttribute('data-product-id'));
+        const itemsDiv = document.querySelector(`.profit-tree-items[data-product-items="${productId}"]`);
+        if(itemsDiv) {
+            const isCollapsed = itemsDiv.classList.contains('collapsed');
+            if(isCollapsed) {
+                itemsDiv.classList.remove('collapsed');
+                header.classList.remove('collapsed');
+                profitTreeState.groups.set(`product_${productId}`, false);
+            } else {
+                itemsDiv.classList.add('collapsed');
+                header.classList.add('collapsed');
+                profitTreeState.groups.set(`product_${productId}`, true);
+            }
+        }
+    }
+    function profitCheckboxChange(e) {
+        const cb = e.target;
+        const type = cb.getAttribute('data-type');
+        const id = parseInt(cb.getAttribute('data-id'));
+        const cost = parseFloat(cb.getAttribute('data-cost'));
+        const name = cb.getAttribute('data-name');
+        const key = `${type}_${id}`;
+        if(cb.checked) {
+            if(!profitSelectedMap.has(key)) {
+                profitSelectedMap.set(key, { id, type, name, cost });
+            }
+        } else {
+            profitSelectedMap.delete(key);
+        }
+        updateProfitSelectedListUI();
+        recalcProfit();
+    }
+    function updateProfitSelectedListUI() {
+        const container = document.getElementById("profitSelectedList");
+        if(!container) return;
+        const totalCost = Array.from(profitSelectedMap.values()).reduce((sum, item) => sum + item.cost, 0);
+        document.getElementById("selectedCountProfit").innerText = profitSelectedMap.size;
+        document.getElementById("productBaseCost").value = totalCost.toFixed(2);
+        if(profitSelectedMap.size === 0) {
+            container.innerHTML = '<div class="badge">暂无选中商品</div>';
+            return;
+        }
+        let html = '';
+        for(let [key, item] of profitSelectedMap.entries()) {
+            html += `<div class="selected-item">
+                <span>${escapeHtml(item.name)} (${item.type === 'sku' ? '单品' : '套餐'}) 成本: ¥${item.cost.toFixed(2)}</span>
+                <button class="remove-selected-item" data-key="${key}"><i class="fas fa-times-circle"></i></button>
+            </div>`;
+        }
+        container.innerHTML = html;
+        container.querySelectorAll('.remove-selected-item').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const key = btn.getAttribute('data-key');
+                if(key && profitSelectedMap.has(key)) {
+                    profitSelectedMap.delete(key);
+                    // 同步树上的checkbox状态
+                    const [type, id] = key.split('_');
+                    const cb = document.querySelector(`.profit-item-checkbox[data-type="${type}"][data-id="${id}"]`);
+                    if(cb) cb.checked = false;
+                    updateProfitSelectedListUI();
+                    recalcProfit();
+                }
+            });
+        });
+    }
+    function clearAllProfitSelections() {
+        profitSelectedMap.clear();
+        // 取消所有checkbox
+        document.querySelectorAll('.profit-item-checkbox').forEach(cb => cb.checked = false);
+        updateProfitSelectedListUI();
+        recalcProfit();
+    }
+    function loadProfitSettings() {
+        let saved = localStorage.getItem(STORAGE_PROFIT_SETTINGS);
+        if(saved) {
+            let settings = JSON.parse(saved);
+            if(settings.shipping !== undefined) document.getElementById("profitShipping").value = settings.shipping;
+            if(settings.packing !== undefined) document.getElementById("profitPacking").value = settings.packing;
+            if(settings.other !== undefined) document.getElementById("profitOtherFee").value = settings.other;
+        } else {
+            document.getElementById("profitShipping").value = 2.5;
+            document.getElementById("profitPacking").value = 0.4;
+            document.getElementById("profitOtherFee").value = 0;
+        }
+    }
+    function saveProfitSettings() {
+        let shipping = parseFloat(document.getElementById("profitShipping").value) || 0;
+        let packing = parseFloat(document.getElementById("profitPacking").value) || 0;
+        let other = parseFloat(document.getElementById("profitOtherFee").value) || 0;
+        localStorage.setItem(STORAGE_PROFIT_SETTINGS, JSON.stringify({ shipping, packing, other }));
+    }
+    function recalcProfit() {
+        let baseCost = parseFloat(document.getElementById("productBaseCost").value) || 0;
+        let shipping = parseFloat(document.getElementById("profitShipping").value) || 0;
+        let packing = parseFloat(document.getElementById("profitPacking").value) || 0;
+        let other = parseFloat(document.getElementById("profitOtherFee").value) || 0;
+        let sellingPrice = parseFloat(document.getElementById("profitSellingPrice").value) || 0;
+        let totalCost = baseCost + shipping + packing + other;
+        let profit = sellingPrice - totalCost;
+        let margin = sellingPrice > 0 ? (profit / sellingPrice) * 100 : 0;
+        document.getElementById("displayTotalCost").innerText = `¥${totalCost.toFixed(2)}`;
+        let profitSpan = document.getElementById("displayProfit");
+        profitSpan.innerText = `¥${profit.toFixed(2)}`;
+        profitSpan.className = `profit-value ${profit >= 0 ? 'positive' : 'negative'}`;
+        let marginSpan = document.getElementById("displayMargin");
+        marginSpan.innerText = `${margin.toFixed(2)}%`;
+        marginSpan.className = `profit-value ${margin >= 0 ? 'positive' : 'negative'}`;
+    }
+    function openProfitCalculator() {
+        profitSelectedMap.clear();
+        profitTreeState.groups.clear();
+        renderProfitTree();
+        loadProfitSettings();
+        document.getElementById("productBaseCost").value = "";
+        document.getElementById("profitSellingPrice").value = "0";
+        recalcProfit();
+        document.getElementById("profitModal").style.display = "flex";
+    }
+    function bindProfitEvents() {
+        document.getElementById("profitCalculatorBtn").onclick = openProfitCalculator;
+        document.getElementById("closeProfitModalBtn").onclick = () => document.getElementById("profitModal").style.display = "none";
+        document.getElementById("cancelProfitModal").onclick = () => document.getElementById("profitModal").style.display = "none";
+        document.getElementById("profitShipping").addEventListener("input", () => { saveProfitSettings(); recalcProfit(); });
+        document.getElementById("profitPacking").addEventListener("input", () => { saveProfitSettings(); recalcProfit(); });
+        document.getElementById("profitOtherFee").addEventListener("input", () => { saveProfitSettings(); recalcProfit(); });
+        document.getElementById("profitSellingPrice").addEventListener("input", recalcProfit);
+        document.getElementById("clearAllProfitBtn").addEventListener("click", clearAllProfitSelections);
+    }
+    
+    function bindStaticEvents() {
+        document.getElementById("addProductBtn").onclick = () => openSkuModal(null);
+        document.getElementById("addPackageBtn").onclick = () => openPackageModal(null);
+        document.getElementById("addGroupBtn").onclick = () => { let name=prompt("新分类名"); if(name){ groups.push({id:generateId(), name:name.trim()}); saveAll(); renderAll(); } };
+        document.getElementById("batchModeBtn").onclick = () => { batchMode=true; document.getElementById("batchActionBar").style.display="flex"; renderAll(); };
+        document.getElementById("exitBatchModeBtn").onclick = () => exitBatchMode();
+        document.getElementById("selectAllBtn").onclick = selectAll;
+        document.getElementById("deselectAllBtn").onclick = deselectAll;
+        document.getElementById("batchCategoryBtn").onclick = () => { if(selectedItems.size===0){ alert("请先勾选商品"); return; } let modal=document.getElementById("batchCategoryModal"); let select=document.getElementById("batchCategorySelect"); select.innerHTML=groups.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join(''); modal.style.display="flex"; };
+        document.getElementById("batchDeleteBtn").onclick = batchDeleteToRecycle;
+        document.getElementById("recycleBinBtn").onclick = () => showRecycleBin();
+        document.getElementById("exportAllBtn").onclick = exportXLSX;
+        document.getElementById("exportTable2Btn").onclick = exportAsTable2;
+        document.getElementById("importBtn").onclick = () => document.getElementById("importFile").click();
+        document.getElementById("importFile").onchange = (e) => { if(e.target.files.length) importXLSX(e.target.files[0]); e.target.value=''; };
+        document.getElementById("clearAllBtn").onclick = clearAllWithPassword;
+        document.getElementById("closeSkuModalBtn").onclick = () => document.getElementById("skuModal").style.display="none";
+        document.getElementById("cancelSkuModal").onclick = () => document.getElementById("skuModal").style.display="none";
+        document.getElementById("closePackageModalBtn").onclick = () => document.getElementById("packageModal").style.display="none";
+        document.getElementById("cancelPackageModal").onclick = () => document.getElementById("packageModal").style.display="none";
+        document.getElementById("closeHistoryModal").onclick = () => document.getElementById("historyModal").style.display="none";
+        document.getElementById("closeLightbox").onclick = () => document.getElementById("lightbox").style.display="none";
+        document.getElementById("lightbox").onclick = (e) => { if(e.target===document.getElementById("lightbox")) document.getElementById("lightbox").style.display="none"; };
+        document.getElementById("closeBatchModal").onclick = () => document.getElementById("batchCategoryModal").style.display="none";
+        document.getElementById("cancelBatchModal").onclick = () => document.getElementById("batchCategoryModal").style.display="none";
+        document.getElementById("confirmBatchBtn").onclick = () => { let targetId=parseInt(document.getElementById("batchCategorySelect").value); batchSetCategory(targetId); document.getElementById("batchCategoryModal").style.display="none"; };
+        document.getElementById("closeRecycleBinModal").onclick = () => document.getElementById("recycleBinModal").style.display="none";
+        document.getElementById("restoreSelectedBtn").onclick = () => { const selected = Array.from(selectedItems); selected.forEach(key => { const [type, id] = key.split('_'); restoreFromRecycleBin(type, parseInt(id)); }); selectedItems.clear(); showRecycleBin(); };
+        document.getElementById("deleteSelectedPermanentlyBtn").onclick = () => { if(confirm("彻底删除选中项？不可恢复！")) { const selected = Array.from(selectedItems); selected.forEach(key => { const [type, id] = key.split('_'); permanentDelete(type, parseInt(id)); }); selectedItems.clear(); showRecycleBin(); } };
+        document.getElementById("emptyRecycleBinBtn").onclick = () => emptyRecycleBin();
+        document.getElementById("skuForm").onsubmit = (e) => { e.preventDefault(); saveSkuLogic(); };
+        document.getElementById("packageForm").onsubmit = (e) => { e.preventDefault(); savePackage(); };
+        document.getElementById("addSkuRemarkBtn").onclick = () => { let remarks = collectSkuRemarks(); remarks.push({text:"", timestamp:new Date().toLocaleString()}); renderSkuRemarks(remarks); };
+        document.getElementById("addPkgRemarkBtn").onclick = () => { let remarks = collectPkgRemarks(); remarks.push({text:"", timestamp:new Date().toLocaleString()}); renderPkgRemarks(remarks); };
+        document.getElementById("newSkuGroupBtn").onclick = () => createNewGroupAndSelect("skuGroupSelect");
+        document.getElementById("newPkgGroupBtn").onclick = () => createNewGroupAndSelect("pkgGroupSelect");
+        document.getElementById("skuImage").addEventListener("input", (e) => previewImage(e.target.value, "skuImagePreview", "previewSkuImg"));
+        document.getElementById("pkgImage").addEventListener("input", (e) => previewImage(e.target.value, "packageImagePreview", "previewPkgImg"));
+        document.getElementById("skuBare").addEventListener("input", updateSkuTotal);
+        document.getElementById("skuFreight").addEventListener("input", updateSkuTotal);
+        document.getElementById("skuOther").addEventListener("input", updateSkuTotal);
+        let productNameSelect = document.getElementById("productNameSelect");
+        let groupSelect = document.getElementById("skuGroupSelect");
+        function updateProductNameSelect() { let gid = parseInt(groupSelect.value); let relatedProducts = productNames.filter(pn => pn.groupId === gid); productNameSelect.innerHTML = '<option value="">-- 选择已有商品 --</option>' + relatedProducts.map(pn => `<option value="${escapeHtml(pn.name)}">${escapeHtml(pn.name)}</option>`).join(''); }
+        groupSelect.onchange = updateProductNameSelect;
+        productNameSelect.onchange = () => { if(productNameSelect.value) document.getElementById("productName").value = productNameSelect.value; };
+        updateProductNameSelect();
+        bindProfitEvents();
+    }
+    function openSkuModal(id=null) { document.getElementById("skuId").value = id||''; let groupSelect = document.getElementById("skuGroupSelect"); groupSelect.innerHTML = groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join(''); let productNameInput = document.getElementById("productName"); if(id) { let sku = skus.find(s => s.id === id); if(sku) { let product = productNames.find(pn => pn.id === sku.productNameId); groupSelect.value = product ? product.groupId : groups[0].id; productNameInput.value = product ? product.name : ""; document.getElementById("skuCode").value = sku.sku; document.getElementById("skuImage").value = sku.imageUrl || ''; document.getElementById("skuBare").value = sku.bareCost; document.getElementById("skuFreight").value = sku.freightCost; document.getElementById("skuOther").value = sku.otherCost; updateSkuTotal(); renderSkuRemarks(sku.remarks || []); previewImage(sku.imageUrl, "skuImagePreview", "previewSkuImg"); let currentGroupId = product ? product.groupId : groups[0].id; let relatedProducts = productNames.filter(pn => pn.groupId === currentGroupId); let productNameSelect = document.getElementById("productNameSelect"); productNameSelect.innerHTML = '<option value="">-- 选择已有商品 --</option>' + relatedProducts.map(pn => `<option value="${escapeHtml(pn.name)}">${escapeHtml(pn.name)}</option>`).join(''); productNameSelect.value = product ? product.name : ""; } } else { groupSelect.value = groups[0].id; productNameInput.value = ""; document.getElementById("skuCode").value = ""; document.getElementById("skuImage").value = ""; document.getElementById("skuBare").value = 0; document.getElementById("skuFreight").value = 0; document.getElementById("skuOther").value = 0; updateSkuTotal(); renderSkuRemarks([]); document.getElementById("skuImagePreview").style.display = "none"; let relatedProducts = productNames.filter(pn => pn.groupId === groups[0].id); let productNameSelect = document.getElementById("productNameSelect"); productNameSelect.innerHTML = '<option value="">-- 选择已有商品 --</option>' + relatedProducts.map(pn => `<option value="${escapeHtml(pn.name)}">${escapeHtml(pn.name)}</option>`).join(''); productNameSelect.value = ""; } document.getElementById("skuModal").style.display = "flex"; }
+    loadData(); bindStaticEvents(); setupGlobalSearch(); initGlobalActionMenu(); renderAll();
+})();
+</script>
+</body>
+</html>
